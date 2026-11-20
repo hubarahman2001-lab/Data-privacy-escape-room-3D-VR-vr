@@ -4,6 +4,8 @@ The 3D, hand-tracked VR version of the data privacy escape room ([2D version](ht
 
 You walk the commute from the car park to the server room. In each room you find the privacy risks yourself and fix them with your hands: pinch, poke, push, wipe, turn a key, make a fist. Each zone you clear gives one digit of the all-clear code, and you enter the code at the server room before the 15-minute lockdown ends.
 
+https://hubarahman2001-lab.github.io/Data-privacy-escape-room-3D-VR-vr/
+
 ## Play it
 
 - **On a Meta Quest:** open the GitHub Pages link in the **Quest Browser** and press **Enter VR**. Put the controllers down: hand tracking works best. (Turn on hand tracking under *Settings → Movement tracking* if it's off.) Clear about 2 × 2 m of space, because you'll take a step or two to reach some things.
