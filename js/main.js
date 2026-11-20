@@ -18,18 +18,35 @@ async function checkVR() {
 }
 checkVR();
 
-let session = null;
+let session = null, starting = false;
+const XR_OPTS = { optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking'] };
 vrBtn.addEventListener('click', async () => {
+  if (starting) return;                     // ignore double taps while the headset is starting up
+  starting = true; vrBtn.disabled = true; note.textContent = 'Starting VR…';
   initAudio();
   try {
-    session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking'] });
-  } catch (e) { note.textContent = 'Could not start VR: ' + e.message; return; }
-  session.addEventListener('end', onEnd);
-  session.addEventListener('visibilitychange', () => togglePause(session.visibilityState !== 'visible'));
-  await renderer.xr.setSession(session);
-  if (renderer.xr.setFoveation) renderer.xr.setFoveation(0.6);
-  menu.classList.add('hidden'); document.body.classList.add('in-vr');
-  startGame();
+    // a session left over from an earlier try (e.g. after leaving VR with the Quest button): close it first
+    const old = renderer.xr.getSession() || session;
+    if (old) { try { await old.end(); } catch (e) {} session = null; await new Promise(r => setTimeout(r, 300)); }
+    try { session = await navigator.xr.requestSession('immersive-vr', XR_OPTS); }
+    catch (e) {
+      if (!/already an active/i.test(e.message)) throw e;
+      await new Promise(r => setTimeout(r, 1200));   // the old session may still be closing: try once more
+      session = await navigator.xr.requestSession('immersive-vr', XR_OPTS);
+    }
+    session.addEventListener('end', onEnd);
+    session.addEventListener('visibilitychange', () => togglePause(session && session.visibilityState !== 'visible'));
+    await renderer.xr.setSession(session);
+    if (renderer.xr.setFoveation) renderer.xr.setFoveation(0.6);
+    note.textContent = '';
+    menu.classList.add('hidden'); document.body.classList.add('in-vr');
+    startGame();
+  } catch (e) {
+    note.textContent = /already an active/i.test(e.message)
+      ? 'VR is already running in another tab or app. Close any other VR tabs or apps (on a PC: exit Quest Link / SteamVR games), then reload this page and press Enter VR once.'
+      : 'Could not start VR: ' + e.message;
+    if (session) { try { await session.end(); } catch (er) {} session = null; }
+  } finally { starting = false; vrBtn.disabled = false; }
 });
 flatBtn.addEventListener('click', () => {
   initAudio(); menu.classList.add('hidden'); document.body.classList.add('flat');
