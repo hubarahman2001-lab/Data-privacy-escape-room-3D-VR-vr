@@ -17,8 +17,8 @@ There's nothing to install and no server. The page is static HTML, and Three.js 
 
 | | Hands (Quest) | Controllers | Screen |
 |---|---|---|---|
-| Pick up / find | Pinch (thumb + index) | Trigger | Click |
-| Carry | Keep pinching and move | Hold trigger | Drag |
+| Pick up / find | Point at it (yellow line) and pinch, or pinch it up close | Point the laser at it (turns yellow) and pull the trigger | Click |
+| Carry | Keep pinching and move (far things fly to your hand) | Hold trigger | Drag |
 | Press a button | Poke it, or point at it and pinch | Touch it, or aim and pull trigger | Click |
 | Open hand (stop someone, hold doors) | Open palm | Hold A / X | Hold click on it |
 | Fist (lock the laptop) | Make a fist | Hold grip | Hold click on it |

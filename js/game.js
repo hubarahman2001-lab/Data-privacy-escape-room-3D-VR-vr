@@ -219,6 +219,7 @@ export function dragTask({ item, zones, grabbedBy = null, onGrab, showBack = fal
     const start = p => {
       held = p; p.captured = item; scene.attach(item); sfx('pickup'); item.getWorldPosition(grabAt);
       if (p.kind === 'mouse') { dist = p.hit ? p.hit.distance : item.getWorldPosition(_v).distanceTo(p.ray.origin); off.subVectors(item.position, p.ray.at(dist, _v)); dist = Math.min(dist, 1.4); }
+      else if (item.position.distanceTo(p.pinchPos) > 0.2) off.set(0, 0, 0); // grabbed with the laser: it flies to your hand
       else off.subVectors(item.position, p.pinchPos);
       if (showBack) off.set(0, 0, 0);
       if (onGrab) onGrab(p);
@@ -288,6 +289,8 @@ export function tapReader(readers, { onBare } = {}) {
         if (okCard && badge.held && badge.card && b.containsPoint(badge.card.getWorldPosition(_c))) { off(); finish(rd); return; }
         for (const p of pointers) {
           if (p.kind === 'mouse') { if (p.pinchStart && at(p, rd)) { if (okCard) { off(); finish(rd); return; } else bare(now); } continue; }
+          // point at the reader and pull the trigger / pinch: taps the card you're wearing
+          if (p.pinchStart && p !== badge.heldBy && !p.captured && p.hit && at(p, rd)) { if (okCard) { off(); finish(rd); return; } else bare(now); }
           if (!badge.held && at(p, rd, 0.01, 'tip')) bare(now);
         }
       }
@@ -386,9 +389,9 @@ function introPanel() {
       let y = textBlock(ctx, "7:45 pm. You came back for your charger. A visitor badge went missing today, so Security is sealing the building in 15 minutes. Find and fix every privacy risk between the car park and the server room, collect the four-digit all-clear code, and enter it before the doors lock.", 50, 130, W - 100, 38, C.text, 500, 1.3);
       y += 24;
       const how = kind === 'ctrl'
-        ? 'Controllers: trigger = pinch / pick up · grip = make a fist · A or X = open hand · B or Y = hint · left stick walks, right stick turns.'
+        ? 'Controllers: point the laser at something (it turns yellow) and pull the trigger to pick it up or use it. Hold the trigger to carry it. Grip = make a fist · A or X = open hand · B or Y = hint · left stick walks, right stick turns.'
         : kind === 'hand'
-          ? 'Use your hands like you would in real life: pinch to pick things up, poke buttons, reach, push, turn. Nobody tells you which move to use. Walk around to reach things. Look at your left wrist for 💡 Hint.'
+          ? 'Point at something (a yellow line shows) and pinch thumb + index to grab it, or reach out and pinch it up close. Keep pinching to carry it. Poke buttons, push, turn. Nobody tells you which move to use. Look at your left wrist for 💡 Hint.'
           : 'Click things to pick them, drag to carry them, hold the mouse on something to hold your hand there. Drag empty space to look around, WASD to walk, H for a hint.';
       textBlock(ctx, how, 50, y, W - 100, 34, C.dim, 500, 1.3);
     };

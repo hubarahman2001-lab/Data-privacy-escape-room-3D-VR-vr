@@ -141,6 +141,8 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
 
+const GRAB_RANGE = 6; // metres: how far away you can point at something and grab it
+function heldByAny(o) { for (const p of [...handPtrs, ...ctrlPtrs]) if (p.captured && isIn(o, p.captured)) return true; return false; }
 function interactive(o) { while (o) { if (o.userData && (o.userData.interactive || o.userData.button)) return true; o = o.parent; } return false; }
 function visibleChain(o) { while (o) { if (!o.visible) return false; o = o.parent; } return true; }
 export function raycastAll(r, roots) {
@@ -197,13 +199,28 @@ beforeFrame((now, dt) => {
         // panels under the ray
         const hits = raycastAll(p.ray, input.uiRoots);
         p.uiHit = hits[0] || null;
-        const show = !!p.uiHit && p.uiHit.distance > 0.12;
-        s.line.visible = s.dot.visible = show;
-        if (show) {
-          s.line.position.copy(p.ray.origin);
-          s.line.scale.setScalar(1); s.line.lookAt(p.uiHit.point); s.line.scale.set(1, 1, p.uiHit.distance);
-          s.dot.position.copy(p.uiHit.point);
+        // things you can pick up / use under the ray (point + trigger/pinch grabs from a distance)
+        p.hit = null;
+        if (!p.uiHit && !p.captured) {
+          for (const h of raycastAll(p.ray, input.rayRoots)) {
+            if (h.distance > GRAB_RANGE) break;
+            if (interactive(h.object) && !heldByAny(h.object)) { p.hit = h; break; }
+          }
         }
+        const tgt = p.uiHit || p.hit;
+        const show = !!tgt && tgt.distance > 0.12;
+        s.line.material.color.setHex(p.hit ? 0xffd34d : 0x7be9ff); s.dot.material.color.copy(s.line.material.color);
+        if (show) {
+          s.line.visible = s.dot.visible = true; s.line.material.opacity = .9;
+          s.line.position.copy(p.ray.origin);
+          s.line.scale.setScalar(1); s.line.lookAt(tgt.point); s.line.scale.set(1, 1, tgt.distance);
+          s.dot.position.copy(tgt.point);
+        } else if (p.kind === 'ctrl' && !p.captured) {
+          // controllers: always show a faint laser so you know you can point with it
+          s.line.visible = true; s.dot.visible = false; s.line.material.opacity = .25;
+          s.line.position.copy(p.ray.origin); s.line.scale.setScalar(1);
+          p.ray.at(1.5, _v); s.line.lookAt(_v); s.line.scale.set(1, 1, 1.5);
+        } else { s.line.visible = s.dot.visible = false; }
         if (p.kind === 'ctrl' && p.btnBStart && input.onHint) input.onHint();
         // controller sticks: left moves, right turns
         if (p.kind === 'ctrl' && p.axes && p.axes.length >= 4 && !input.moveLocked) {
@@ -237,6 +254,7 @@ export function boxOf(obj) { return _b.setFromObject(obj); }
 export function at(p, obj, r = 0.05, where = 'pinch') {
   if (!obj) return false;
   if (p.kind === 'mouse') return !!(p.hit && isIn(p.hit.object, obj));
+  if (where === 'pinch' && p.hit && isIn(p.hit.object, obj)) return true; // pointing at it with the laser
   const pt = where === 'tip' ? p.tip : where === 'palm' ? p.palm : p.pinchPos;
   return boxOf(obj).expandByScalar(r).containsPoint(pt);
 }
