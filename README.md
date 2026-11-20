@@ -61,3 +61,12 @@ All the questions are in `js/content.js`. `DECISIONS` holds the judgment calls, 
 - WebXR needs **https**. GitHub Pages is fine, but opening `index.html` from a file won't start VR. For a local test, run `python3 -m http.server` and use the Quest's browser on the same network, or play on the screen.
 - Sam's voice uses the browser's own speech, and subtitles always show.
 - The game was tested in an emulated Quest 3 with tracked hands (IWER) and on a desktop browser. It hasn't been tried on a real headset yet.
+
+## SCORM package (for MLZ or any LMS)
+
+Run `python3 scorm/build.py` to make `dist/LockDownTheOffice_VR_SCORM12.zip` and `dist/LockDownTheOffice_VR_SCORM2004.zip`. Upload whichever your LMS takes; SCORM 1.2 is the safest choice.
+
+- The course page has a **Play** button that opens the game in its own window. LMS players frame their content, and VR can't start inside a frame unless the LMS allows it, so the game needs its own window.
+- When a run ends, the game sends the result back to the course page. That page reports it to the LMS: score = % of choices right first time, and **passed** when the run is finished with 80% or more. Your best result is kept, and a pass is never downgraded.
+- Learners must keep the course page open while they play.
+- For VR, open the LMS in the **Quest Browser** and allow pop-ups for the LMS site.

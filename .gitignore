@@ -2,3 +2,4 @@ _test/
 xr-test.html
 node_modules/
 .DS_Store
+dist/

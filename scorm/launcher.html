@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lock Down the Office · VR data privacy escape room</title>
+<style>
+  :root { --acc: #7be9ff; --text: #eef6ff; --dim: #a9bdd3; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: radial-gradient(1200px 700px at 30% 20%, #10304a 0%, #07101c 55%, #03060b 100%); color: var(--text); font-family: system-ui, "Segoe UI", Roboto, Arial, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 24px; }
+  .kicker { color: var(--acc); letter-spacing: .14em; font-weight: 700; font-size: 13px; text-transform: uppercase; }
+  h1 { margin: 8px 0 12px; font-size: 36px; }
+  p, li { color: var(--dim); line-height: 1.55; font-size: 16px; }
+  p strong, li strong { color: var(--text); }
+  button { font: inherit; font-weight: 700; font-size: 18px; padding: 16px 26px; border-radius: 14px; border: 0; cursor: pointer; background: var(--acc); color: #04121d; }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid rgba(123,233,255,.5); font-size: 15px; padding: 10px 16px; }
+  #status { margin: 18px 0; padding: 14px 16px; border-radius: 12px; background: rgba(9,18,32,.85); border: 1px solid rgba(123,233,255,.3); font-size: 15px; }
+  #status.pass { border-color: #2fcf84; } #status.fail { border-color: #ffc857; }
+  #blocked { display: none; }
+  #frameWrap { display: none; position: fixed; inset: 0; background: #000; z-index: 10; }
+  #frameWrap iframe { width: 100%; height: 100%; border: 0; }
+  #closeFrame { position: fixed; bottom: 12px; left: 12px; z-index: 11; display: none; }
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">Data privacy escape room · VR</div>
+  <h1>Lock Down the Office</h1>
+  <p>Walk from the car park to the server room, find and fix every privacy risk with your hands, collect the all-clear code and enter it before the building locks down in 15 minutes.</p>
+  <p><strong>On a Meta Quest:</strong> press Play, then <strong>Enter VR</strong> in the window that opens. <strong>On a computer:</strong> press Play, then <strong>Play on this screen</strong>.</p>
+  <p><button id="play">▶ Play</button></p>
+  <p id="blocked">Your browser blocked the game window. <button class="ghost" id="playHere">Play inside this page instead</button><br><small>VR may not start inside this page. On a Quest, allow pop-ups for this site and press Play again.</small></p>
+  <div id="status">Not attempted yet. Pass mark: 80% of choices right first time, before the time runs out.</div>
+  <p><small>Keep this page open while you play: your result is sent back to the course when you finish. You can play again to improve your result.</small></p>
+</main>
+<div id="frameWrap"><iframe id="frame" title="Escape room game" allow="xr-spatial-tracking; fullscreen; autoplay"></iframe></div>
+<button class="ghost" id="closeFrame">✕ Close game</button>
+<script>
+/* ---------- SCORM 1.2 / 2004 API wrapper ---------- */
+var S = (function () {
+  var api = null, v = null, start = Date.now(), done = false;
+  function find(w) { var n = 0; while (w && n < 12) { if (w.API_1484_11) { v = '2004'; return w.API_1484_11; } if (w.API) { v = '1.2'; return w.API; } if (w.parent === w) break; w = w.parent; n++; } return null; }
+  api = find(window) || (window.opener && find(window.opener)) || (window.top && window.top.opener && find(window.top.opener));
+  function call(f12, f04, a, b) { if (!api) return ''; try { return v === '2004' ? api[f04](a, b) : api[f12](a, b); } catch (e) { return ''; } }
+  function get(k) { return call('LMSGetValue', 'GetValue', k); }
+  function set(k, val) { return call('LMSSetValue', 'SetValue', k, String(val)); }
+  function commit() { return call('LMSCommit', 'Commit', ''); }
+  function time12(ms) { var s = Math.round(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); s = s % 60; function p(x, n) { x = String(x); while (x.length < n) x = '0' + x; return x; } return p(h, 4) + ':' + p(m, 2) + ':' + p(s, 2); }
+  function time04(ms) { return 'PT' + Math.round(ms / 1000) + 'S'; }
+  return {
+    ok: function () { return !!api; },
+    init: function () {
+      if (!api) return;
+      call('LMSInitialize', 'Initialize', '');
+      if (v === '2004') { if (get('cmi.completion_status') !== 'completed') set('cmi.completion_status', 'incomplete'); set('cmi.exit', 'suspend'); }
+      else { var st = get('cmi.core.lesson_status'); if (st === 'not attempted' || st === '') set('cmi.core.lesson_status', 'incomplete'); set('cmi.core.exit', 'suspend'); }
+      commit();
+    },
+    passedAlready: function () { return v === '2004' ? get('cmi.success_status') === 'passed' : get('cmi.core.lesson_status') === 'passed'; },
+    bestScore: function () { var s = parseFloat(get(v === '2004' ? 'cmi.score.raw' : 'cmi.core.score.raw')); return isNaN(s) ? -1 : s; },
+    result: function (pct, passed) {
+      if (!api) return;
+      var keepPass = this.passedAlready(), best = this.bestScore();
+      if (pct >= best || !keepPass) {
+        if (v === '2004') { set('cmi.score.min', 0); set('cmi.score.max', 100); set('cmi.score.raw', pct); set('cmi.score.scaled', (pct / 100).toFixed(2)); }
+        else { set('cmi.core.score.min', 0); set('cmi.core.score.max', 100); set('cmi.core.score.raw', pct); }
+      }
+      if (v === '2004') { set('cmi.completion_status', 'completed'); set('cmi.success_status', passed || keepPass ? 'passed' : 'failed'); }
+      else set('cmi.core.lesson_status', passed || keepPass ? 'passed' : 'failed');
+      commit();
+    },
+    finish: function () {
+      if (!api || done) return; done = true;
+      var ms = Date.now() - start;
+      if (v === '2004') { set('cmi.session_time', time04(ms)); call('LMSFinish', 'Terminate', ''); }
+      else { set('cmi.core.session_time', time12(ms)); commit(); call('LMSFinish', 'Terminate', ''); }
+    }
+  };
+})();
+S.init();
+
+/* ---------- launching the game ---------- */
+var launchedAt = Date.now(), handled = {}, gameWin = null;
+var GAME = 'game/index.html?scorm=1';
+document.getElementById('play').onclick = function () {
+  launchedAt = Date.now();
+  gameWin = window.open(GAME, 'lockDownTheOffice');
+  if (!gameWin) document.getElementById('blocked').style.display = 'block';
+  else { try { gameWin.focus(); } catch (e) {} }
+};
+document.getElementById('playHere').onclick = function () {
+  launchedAt = Date.now();
+  document.getElementById('frame').src = GAME;
+  document.getElementById('frameWrap').style.display = 'block';
+  document.getElementById('closeFrame').style.display = 'block';
+};
+document.getElementById('closeFrame').onclick = function () {
+  document.getElementById('frame').src = 'about:blank';
+  document.getElementById('frameWrap').style.display = 'none';
+  this.style.display = 'none';
+};
+
+/* ---------- results coming back from the game ---------- */
+function apply(m) {
+  if (!m || m.type !== 'escape-result' || !m.at || m.at < launchedAt - 1000 || handled[m.at]) return;
+  handled[m.at] = true;
+  var pct = Math.round((m.share || 0) * 100), passed = !!m.passed;
+  S.result(pct, passed);
+  var el = document.getElementById('status');
+  el.className = passed ? 'pass' : 'fail';
+  el.innerHTML = (passed ? '✅ <strong>Passed</strong>' : (m.won ? '🔁 <strong>Not a pass yet</strong>' : '⏱ <strong>Time ran out</strong>')) +
+    ' · ' + (m.right || 0) + ' of ' + (m.total || 0) + ' right first time (' + pct + '%). ' +
+    (S.ok() ? 'Saved to your course.' : 'No course connection found, so this result was not saved.') +
+    (passed ? '' : ' Press Play to try again.');
+}
+window.addEventListener('message', function (e) { apply(e.data); });
+window.addEventListener('storage', function (e) { if (e.key === 'escape-result') try { apply(JSON.parse(e.newValue)); } catch (er) {} });
+function poll() { try { apply(JSON.parse(localStorage.getItem('escape-result'))); } catch (e) {} }
+window.addEventListener('focus', poll);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
+setInterval(poll, 3000);
+window.addEventListener('pagehide', function () { S.finish(); });
+window.addEventListener('beforeunload', function () { S.finish(); });
+if (!S.ok()) document.getElementById('status').textContent = 'Opened outside a course (no LMS found): you can play, but results are not saved.';
+</script>
+</body>
+</html>

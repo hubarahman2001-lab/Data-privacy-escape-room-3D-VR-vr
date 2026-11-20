@@ -429,7 +429,14 @@ function results(won) {
   P.addButton([P.W / 2 - 260, P.H - 150, 520, 110], '↻  Play again', () => { P.dispose(); startGame({ intro: false }); }, { size: 48 });
   P.redraw(); show(P, 0.62, -0.06);
   hud.active = false;
-  if (window.parent) try { window.dispatchEvent(new CustomEvent('escape-result', { detail: { won, passed, score: G.score, share } })); } catch (e) {}
+  reportResult({ won, passed, score: G.score, share, right: firstRight, total, used: Math.round(used) });
+}
+/* tell a SCORM launcher (the window that opened this one, or the page around it) how the run went */
+function reportResult(detail) {
+  const msg = { type: 'escape-result', ...detail, at: Date.now() };
+  try { window.dispatchEvent(new CustomEvent('escape-result', { detail: msg })); } catch (e) {}
+  try { localStorage.setItem('escape-result', JSON.stringify(msg)); } catch (e) {}
+  for (const w of [window.opener, window.parent !== window ? window.parent : null]) { try { if (w) w.postMessage(msg, '*'); } catch (e) {} }
 }
 
 setupWrist(() => useHint(), () => repeatLine());

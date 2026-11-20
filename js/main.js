@@ -17,6 +17,12 @@ async function checkVR() {
   } catch (e) { vrBtn.disabled = true; }
 }
 checkVR();
+/* opened from the course (SCORM): say where the result goes */
+if (/[?&]scorm=1/.test(location.search)) {
+  const tip = document.createElement('p'); tip.style.cssText = 'color:#7be9ff;font-size:14px;margin-top:6px';
+  tip.textContent = 'Opened from your course: your result is sent back when you finish. Keep the course window open.';
+  note.after(tip);
+}
 
 let session = null, starting = false;
 const XR_OPTS = { optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking'] };
