@@ -189,14 +189,14 @@ const parking = {
           objective('ID card in your pocket'); },
         lesson: ['Keep your card on you', 'An ID card left in a car can be taken and used by someone else.'] }] });
   },
-  exit: r => ({ target: r.door, pos: [2.9, -2.2], label: 'Take the stairs up', travel: 'Taking the stairs up to the ground floor…', sound: 'stairs' }),
+  exit: r => ({ target: r.door, pos: [2.9, -2.2], dir: [1, 0], label: 'Take the stairs up', travel: 'Taking the stairs up to the ground floor…', sound: 'stairs' }),
 };
 
 /* ======================================================================
    2. GROUND FLOOR (escalator)
    ====================================================================== */
 const ground = {
-  id: 'escalator', name: 'Ground floor', floor: 'G', zone: 1, zoneName: 'Arrival', line: 'The escalator is still running.',
+  id: 'escalator', arrive: [2.4, 0.6], name: 'Ground floor', floor: 'G', zone: 1, zoneName: 'Arrival', line: 'The escalator is still running.',
   bounds: [-2.6, 2.6, -1.4, 1.8],
   build(root) {
     const g = group(root);
@@ -218,7 +218,7 @@ const ground = {
       box(esc, .12, 1.0, .5, F.steel(), s * .56, 0, -.15);
     }
     box(g, 6, .3, 4, M('#cfcac2', { r: .7 }), 0, 3.1, -4.2);
-    sign(g, 1.6, .32, { text: 'Level 1 ↑  Reception · Gates · Lifts', bg: '#1b2a3d', size: .45, glow: true }, 0, 2.75, -1.35);
+    sign(g, 2.4, .3, { text: 'Level 1 ↑  Reception · Gates · Lifts', bg: '#1b2a3d', size: .5, glow: true }, 0, 2.75, -1.35);
     plant(g, -1.9, -0.9); plant(g, 2.0, -0.5);
     const bench = group(g, -2.3, 0, .6, Math.PI / 2); box(bench, 1.4, .06, .45, F.wood('#6b4a30'), 0, .42, 0); box(bench, .06, .42, .4, F.steel(), -.6, 0, 0); box(bench, .06, .42, .4, F.steel(), .6, 0, 0);
     g.userData.off = onFrame((n, dt) => { stepTex.offset.y -= dt / 4000; });
@@ -243,14 +243,14 @@ const ground = {
     lesson(['Badge on inside, away outside', 'Wear your card where it can be seen in the building. Outside, put it away: a badge tells strangers where you work.']);
     await wait(800);
   },
-  exit: r => ({ target: r.steps, pos: [0, -1.4, 1.6], label: 'Ride the escalator up', travel: 'Riding the escalator up to Level 1…', sound: 'escalator' }),
+  exit: r => ({ target: r.steps, pos: [0, -1.4, 1.6], path: [[0, -1.6], [0, -2.9, 0.75, 0.8], [0, -4.3, 1.55, 0.8]], label: 'Ride the escalator up', travel: 'Riding the escalator up to Level 1…', sound: 'escalator' }),
 };
 
 /* ======================================================================
    3. RECEPTION
    ====================================================================== */
 const reception = {
-  id: 'reception', name: 'Reception', floor: '1', zone: 1, zoneName: 'Arrival', line: "Reception has gone home. The paperwork hasn't.",
+  id: 'reception', arrive: [0, 1.7], name: 'Reception', floor: '1', zone: 1, zoneName: 'Arrival', line: "Reception has gone home. The paperwork hasn't.",
   outro: 'Desk secured. The gates are next.', bounds: [-2.4, 2.4, -0.5, 1.8],
   build(root) {
     const g = group(root);
@@ -319,14 +319,14 @@ const reception = {
           task: async () => { await wait(900); await decide(DECISIONS.badgeIssue); } }],
       decoys: [{ obj: r.pen, say: 'Just a pen. Nothing to worry about.' }, { obj: r.mags, say: 'Old magazines. Nothing personal in there.' }] });
   },
-  exit: r => ({ target: r.exitSign, pos: [2.1, -0.4], label: 'Walk to the gates', travel: 'Walking over to the security gates…', sound: 'walk' }),
+  exit: r => ({ target: r.exitSign, pos: [2.1, -0.4], dir: [1, 0], label: 'Walk to the gates', travel: 'Walking over to the security gates…', sound: 'walk' }),
 };
 
 /* ======================================================================
    4. SECURITY GATES
    ====================================================================== */
 const gates = {
-  id: 'gates', name: 'Security gates', floor: '1', zone: 1, zoneName: 'Arrival', zoneEnd: true, line: 'The line between public and private.',
+  id: 'gates', arrive: [-1.6, 0.5], name: 'Security gates', floor: '1', zone: 1, zoneName: 'Arrival', zoneEnd: true, line: 'The line between public and private.',
   outro: 'Ground floor sealed. The lifts are yours.', bounds: [-1.8, 1.8, -0.9, 1.6],
   build(root) {
     const g = group(root);
@@ -382,7 +382,7 @@ const gates = {
           await tween(500, k => r.flaps.forEach(f => f.piv.rotation.y = f.s * k * 1.45));
         }, lesson: ['One tap, one person', 'Never let anyone follow you through on your card.'] }] });
   },
-  exit: r => ({ target: r.readers[1], pos: [0.4, -2.2], label: 'Head for the lifts', travel: 'Through the gates, over to the lifts…', sound: 'walk' }),
+  exit: r => ({ target: r.readers[1], pos: [0.4, -2.2], path: [[0.4, -0.6], [0.4, -2.2]], dir: [0, -1], label: 'Head for the lifts', travel: 'Through the gates, over to the lifts…', sound: 'walk' }),
 };
 
 /* ======================================================================
@@ -405,7 +405,7 @@ function liftDoor(parent, x, z, open = 0) {
   return { g, set, L, R, inner };
 }
 const lifts = {
-  id: 'lifts', name: 'Lift lobby', floor: '1', zone: 2, zoneName: 'Access', line: 'One lift is still open.',
+  id: 'lifts', arrive: [0, 1.5], name: 'Lift lobby', floor: '1', zone: 2, zoneName: 'Access', line: 'One lift is still open.',
   outro: "That's our missing badge. I'm on my way up to escort them out. Nice work. Ride up to Floor 4.", bounds: [-1.8, 1.8, -1.3, 1.5],
   build(root) {
     const g = group(root);
@@ -447,14 +447,14 @@ const lifts = {
     await walkTo(r.visitor, 0, .9, 1400); r.visitor.visible = false;
     await tween(600, k => r.B.set(1 - k));
   },
-  exit: r => { r.A.set(0); tween(900, k => r.A.set(k)); return { target: r.A.g, pos: [-0.75, -1.5], label: 'Ride up to Floor 4', travel: 'Going up to Floor 4…', sound: 'lift' }; },
+  exit: r => { r.A.set(0); tween(900, k => r.A.set(k)); return { target: r.A.g, pos: [-0.75, -1.5], path: [[-0.75, -1.2], [-0.75, -2.3]], dir: [0, -1], beyond: 0.25, beforeLeave: async () => { await tween(900, k => r.A.set(1 - k)); sfx('chime'); await wait(400); }, label: 'Ride up to Floor 4', travel: 'Going up to Floor 4…', sound: 'lift' }; },
 };
 
 /* ======================================================================
    6. FLOOR 4 ENTRANCE
    ====================================================================== */
 const entrance = {
-  id: 'entrance', name: 'Floor 4 entrance', floor: '4', zone: 2, zoneName: 'Access', zoneEnd: true, line: 'Your office is through these doors.',
+  id: 'entrance', arrive: [0, 1.5], name: 'Floor 4 entrance', floor: '4', zone: 2, zoneName: 'Access', zoneEnd: true, line: 'Your office is through these doors.',
   outro: 'Floor 4 is covered. Your desk is straight ahead.', bounds: [-1.6, 1.6, -1.0, 1.6],
   build(root) {
     const g = group(root);
@@ -526,7 +526,7 @@ const entrance = {
           walkTo(r.pA, -1.0, -3.5, 2500).then(() => r.pA.visible = false); walkTo(r.pB, -0.8, -3.8, 2700).then(() => r.pB.visible = false);
         }, lesson: ['Need to know, not nice to know', 'Discuss customer details in private, with the people who need them.'] }] });
   },
-  exit: r => ({ target: r.dl, pos: [0, -1.9], label: 'Walk to your desk', travel: 'Across the office to your desk…', sound: 'walk' }),
+  exit: r => ({ target: r.dl, pos: [0, -1.9], path: [[0, -1.0], [0, -1.9]], dir: [0, -1], label: 'Walk to your desk', travel: 'Across the office to your desk…', sound: 'walk' }),
 };
 
 /* ======================================================================
@@ -542,7 +542,7 @@ function screenSheet(c, W, H, locked) {
   c.font = `500 ${H * .048}px ${FONT}`; rows.forEach((rw, j) => { const y = H * (.27 + j * .11); rw.forEach((t, i) => c.fillText(t, 12 + i * W / 4, y)); c.fillStyle = '#dde3ea'; c.fillRect(0, y + H * .03, W, 1); c.fillStyle = '#1b2a3d'; });
 }
 const desk = {
-  id: 'desk', name: 'Your desk', floor: '4', zone: 3, zoneName: 'Workspace', line: "Exactly as you left it. That's the problem.",
+  id: 'desk', arrive: [1.0, 1.8], name: 'Your desk', floor: '4', zone: 3, zoneName: 'Workspace', line: "Exactly as you left it. That's the problem.",
   outro: "Desk's clean. The meeting room's next.", bounds: [-1.7, 1.8, -0.35, 1.6],
   build(root) {
     const g = group(root);
@@ -626,14 +626,14 @@ const desk = {
     lesson(['Real IT never asks for your password', 'Urgency is a red flag. Hang up and report the call.']);
     await wait(1200);
   },
-  exit: r => ({ target: null, pos: [-1.55, 0.6, 2.3], label: 'Check the meeting room', travel: 'Into meeting room 4.12…', sound: 'walk' }),
+  exit: r => ({ target: null, pos: [-1.55, 0.6, 2.3], dir: [-1, 0], label: 'Check the meeting room', travel: 'Into meeting room 4.12…', sound: 'walk' }),
 };
 
 /* ======================================================================
    8. MEETING ROOM
    ====================================================================== */
 const meeting = {
-  id: 'meeting', name: 'Meeting room', floor: '4', zone: 3, zoneName: 'Workspace', zoneEnd: true, line: 'Half the meeting is still on the table.',
+  id: 'meeting', arrive: [-1.35, 1.1], name: 'Meeting room', floor: '4', zone: 3, zoneName: 'Workspace', zoneEnd: true, line: 'Half the meeting is still on the table.',
   outro: "Room's clear. The print station is the last zone.", bounds: [-1.6, 0.9, -0.3, 1.4],
   build(root) {
     const g = group(root);
@@ -722,7 +722,7 @@ const meeting = {
           }, lesson: ['Confidential means locked away', 'Unreleased financials stay locked up and go only to people who need them.'] }],
       decoys: [{ obj: r.glassW, say: 'Just water. Nothing to protect.' }] });
   },
-  exit: r => ({ target: null, pos: [-1.45, 1.1, 2.2], label: 'Go to the print station', travel: 'Down the corridor to the print station…', sound: 'walk' }),
+  exit: r => ({ target: null, pos: [-1.45, 1.1, 2.2], dir: [-1, 0], label: 'Go to the print station', travel: 'Down the corridor to the print station…', sound: 'walk' }),
 };
 
 /* ======================================================================
@@ -738,7 +738,7 @@ function printout(pg) {
   } });
 }
 const printer = {
-  id: 'printer', name: 'Print station', floor: '4', zone: 4, zoneName: 'Print room', zoneEnd: true, line: 'The printer is still warm.',
+  id: 'printer', arrive: [0, 1.4], name: 'Print station', floor: '4', zone: 4, zoneName: 'Print room', zoneEnd: true, line: 'The printer is still warm.',
   outro: "Print room's clean. One door left: the server room.", bounds: [-1.5, 1.0, -0.2, 1.4],
   build(root) {
     const g = group(root);
@@ -821,14 +821,14 @@ const printer = {
             showCard('Key in your pocket', "You'll hand it to Security on the way out.", { color: C.acc, ms: 3000 });
           }, lesson: ['Keys stay with their owner', 'Lock up, and hand a found key to its named holder or to Security.'] }] });
   },
-  exit: r => ({ target: null, pos: [-1.5, 0.9, 2.3], label: 'Enter the server room', travel: 'To the server room door…', sound: 'walk' }),
+  exit: r => ({ target: null, pos: [-1.5, 0.9, 2.3], dir: [-1, 0], label: 'Enter the server room', travel: 'To the server room door…', sound: 'walk' }),
 };
 
 /* ======================================================================
    10. SERVER ROOM
    ====================================================================== */
 const server = {
-  id: 'server', name: 'Server room', floor: '4', zone: 5, zoneName: 'Lockdown', final: true, line: 'Send the all-clear before the doors lock.', amb: 'server',
+  id: 'server', arrive: [0, 1.4], name: 'Server room', floor: '4', zone: 5, zoneName: 'Lockdown', final: true, line: 'Send the all-clear before the doors lock.', amb: 'server',
   bounds: [-0.9, 0.9, -0.4, 1.4],
   build(root) {
     const g = group(root);

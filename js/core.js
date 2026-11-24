@@ -94,6 +94,16 @@ export function fade(to, ms = 450) {
     if (k >= 1) { off(); if (to === 0) fadeMesh.visible = false; res(); } }); });
 }
 
+/* comfort vignette: darkens the edges of your view while the game moves you */
+const vigTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
+  const g = x.createRadialGradient(128, 128, 40, 128, 128, 128); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.55, 'rgba(0,0,0,0)'); g.addColorStop(.85, 'rgba(0,0,0,.75)'); g.addColorStop(1, 'rgba(0,0,0,1)');
+  x.fillStyle = g; x.fillRect(0, 0, 256, 256); const t = new THREE.CanvasTexture(c); return t; })();
+const vigMat = new THREE.MeshBasicMaterial({ map: vigTex, transparent: true, opacity: 0, depthTest: false, depthWrite: false });
+const vigMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), vigMat);
+vigMesh.position.z = -0.22; vigMesh.renderOrder = 9990; vigMesh.frustumCulled = false; vigMesh.userData.noHit = true; vigMesh.visible = false;
+camera.add(vigMesh);
+export function vignette(op) { vigMat.opacity = op; vigMesh.visible = op > 0.01; }
+
 /* put the player's head at world (0, y, 0) facing -Z, whatever their real position in the play space */
 export function recenter() {
   if (isXR()) {

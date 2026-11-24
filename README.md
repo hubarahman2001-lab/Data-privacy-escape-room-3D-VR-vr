@@ -40,6 +40,10 @@ The game doesn't tell you which move to use. Sam gives a short brief, and you wo
 9. **Print station**: sort the uncollected printouts, and lock the HR cabinet.
 10. **Server room**: enter the code, then answer the final question.
 
+## Moving between rooms
+
+When you leave a room, the game walks you to the exit and through it. It rides the escalator up and takes you into the lift, and you walk into the next room from its doorway. In VR the edges of your view darken while you're being moved, which helps with motion sickness. If moving in VR still feels bad, tick **Comfort mode** on the start page to fade between rooms instead.
+
 ## Edit the questions
 
 All the questions are in `js/content.js`. `DECISIONS` holds the judgment calls, and `PAGES` holds the printouts to sort. They're the same placeholders as the 2D game, so replace them with your course questions before real use. Sam's lines and the lessons for each room are in `js/rooms.js`. The timer, penalties, hints and pass mark are at the top of `js/game.js` (`CFG`).

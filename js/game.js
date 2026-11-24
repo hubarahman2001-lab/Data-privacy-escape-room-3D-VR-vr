@@ -1,12 +1,12 @@
 /* Game state, timer, scoring, hints, and the shared task helpers (hunt, decide, drag, hold, readers, exits) */
-import { THREE, scene, camera, rig, body, onFrame, sleep, headPos, isXR, inFront, fade, recenter, fitHeight, clamp, V } from './core.js';
+import { THREE, scene, camera, rig, body, onFrame, sleep, headPos, isXR, inFront, fade, recenter, fitHeight, clamp, V, vignette } from './core.js';
 import { pointers, input, at, raycastAll, inputKind, boxOf } from './input.js';
 import { Panel, C, FONT, textBlock, wrap, rrect, hud, setHud, showCard, hideCard, placeInFront, Ring, glow, uiRoot, wrist, setupWrist } from './ui.js';
 import { sfx, speak, stopSpeech, initAudio, ambience, travelSound } from './audio.js';
 import { idCard } from './world.js';
 
 export const CFG = { TIME_LIMIT: 900, WRONG_PENALTY: 10, MAX_HINTS: 3, PASS_MARK: 0.8, DECOY_PENALTY: 5, VAGUE_MS: 40000, FREE_NUDGE_MS: 60000 };
-export const G = { runId: 0, state: 'idle', timeLeft: CFG.TIME_LIMIT, score: 0, hints: CFG.MAX_HINTS, code: [], got: [], choices: [], penalties: 0,
+export const G = { comfort: false, runId: 0, state: 'idle', timeLeft: CFG.TIME_LIMIT, score: 0, hints: CFG.MAX_HINTS, code: [], got: [], choices: [], penalties: 0,
   paused: false, badge: 'none', lastLine: '', hintStack: [], cleanups: [] };
 
 /* ---------- run guards: when the game restarts, old task chains freeze instead of carrying on ---------- */
@@ -364,7 +364,7 @@ export async function startGame({ intro = true, from = 0 } = {}) {
     recenter(); if (i === from) fitHeight();
     ambStop = ambience(R.amb || 'hum');
     setHud({ zone: `${R.floor} · ${R.name}` });
-    if (pendingTravel) { await pendingTravel.arrive(); pendingTravel = null; } else await fade(0, 700);
+    if (pendingTravel) { await pendingTravel.arrive(R); pendingTravel = null; } else await fade(0, 700);
     if (id !== G.runId) return;
     if (i === from && intro) { hud.active = false; await introPanel(); if (id !== G.runId) return; }
     G.state = 'play'; hud.active = true; hud.showUntil = performance.now() + 9000;
@@ -390,24 +390,73 @@ async function travelOut(ex, next) {
   hud.showUntil = 0; hideCard();
   const lvl = next ? (next.floor === 'P' ? 'Car park' : next.floor === 'G' ? 'Ground floor' : 'Level ' + next.floor) : '';
   const text = (ex && ex.travel) || 'Walking on…', sub = next ? (lvl.toLowerCase() === next.name.toLowerCase() ? next.name : `${lvl} · ${next.name}`) : '';
-  travelSound((ex && ex.sound) || 'walk', 2600);
-  // on a screen, glide a few steps toward the exit while it goes dark (in VR the world never moves you: comfort)
-  if (!isXR() && ex && ex.pos) {
-    const from = rig.position.clone(); headPos(_gl);
-    const dx = ex.pos[0] - _gl.x, dz = ex.pos[1] - _gl.z, len = Math.hypot(dx, dz), go = Math.min(1.4, len);
-    const to = from.clone().add(new THREE.Vector3(dx / (len || 1) * go, 0, dz / (len || 1) * go));
-    const yaw0 = camera.rotation.y, yaw1 = Math.atan2(-dx, -dz), pitch0 = camera.rotation.x;
-    let dy = yaw1 - yaw0; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-    tweenG(1300, k => { rig.position.lerpVectors(from, to, k); camera.rotation.y = yaw0 + dy * Math.min(1, k * 1.6); camera.rotation.x = pitch0 * (1 - k); });
+  const kind = (ex && ex.sound) || 'walk';
+  const walking = !G.comfort && ex && ex.pos;
+  const baseY = rig.position.y;
+  if (walking) {
+    // walk to the exit and on through it; it only goes dark at the doorway
+    headPos(_gl);
+    const pts = (ex.path || [[ex.pos[0], ex.pos[1]]]).map(p => ({ x: p[0], z: p[1], y: p[2] || 0, speed: p[3] }));
+    const last = pts[pts.length - 1], prev = pts.length > 1 ? pts[pts.length - 2] : { x: _gl.x, z: _gl.z };
+    let dx = last.x - prev.x, dz = last.z - prev.z, dl = Math.hypot(dx, dz);
+    if (dl < 0.2 && ex.dir) { dx = ex.dir[0]; dz = ex.dir[1]; dl = 1; }
+    const bd = ex.beyond ?? 0.9, beyond = { x: last.x + dx / (dl || 1) * bd, z: last.z + dz / (dl || 1) * bd, y: last.y };
+    if (kind === 'escalator' || kind === 'lift') travelSound(kind, 4000);
+    await walkPath(pts, { kind, baseY });
+    if (ex.beforeLeave) await ex.beforeLeave();
+    const f = fade(1, 650);
+    await walkPath([beyond], { kind, baseY, keepVignette: true });
+    await f; vignette(0);
+  } else {
+    travelSound(kind, 2600);
+    await sleep(350); await fade(1, 950);
   }
-  await sleep(350);
-  await fade(1, 950);
-  const card = travelCard(text, sub); await card.show(450);
+  rig.position.y = baseY;
+  const card = travelCard(text, sub); await card.show(walking ? 300 : 450);
   const t0 = performance.now();
-  return { async arrive() {
-    const left = 1700 - (performance.now() - t0); if (left > 0) await sleep(left);
-    card.hide(700); await fade(0, 1100); card.dispose();
+  return { async arrive(R) {
+    const left = (walking ? 900 : 1700) - (performance.now() - t0); if (left > 0) await sleep(left);
+    card.hide(500);
+    if (walking && R && R.arrive) {
+      // start a few steps back, at the way in, and walk to your spot while it gets light
+      const [ax, az] = R.arrive; rig.position.x += ax; rig.position.z += az;
+      if (!isXR()) camera.rotation.y = Math.atan2(ax, az);
+      const f = fade(0, 700);
+      await walkPath([{ x: 0, z: 0, y: 0 }], { kind: 'walk', baseY, faceEnd: true });
+      await f;
+    } else await fade(0, 1100);
+    card.dispose();
   } };
+}
+/* move the player along points (head positions on the floor plan). Steps, vignette, and on a screen the view turns to face where you go. */
+function walkPath(pts, { kind = 'walk', baseY = 0, keepVignette = false, faceEnd = false } = {}) {
+  return new Promise(res => {
+    let i = 0, seg = null, stepAt = 0; const t0 = performance.now();
+    const off = onFrame((now, dt) => {
+      if (!seg) {
+        if (i >= pts.length) { off(); if (!keepVignette) vignette(0); if (faceEnd && !isXR()) camera.rotation.y = 0; res(); return; }
+        const p = pts[i++]; headPos(_gl);
+        const dx = p.x - _gl.x, dz = p.z - _gl.z, d = Math.hypot(dx, dz);
+        const speed = p.speed || (kind === 'escalator' && p.y ? 0.75 : 1.15);
+        seg = { rx: rig.position.x, rz: rig.position.z, ry: rig.position.y, dx, dz, ty: baseY + (p.y || 0), ms: Math.max(250, d / speed * 1000), t: now, first: i === 1, lastSeg: i === pts.length };
+        if (d < 0.05 && !p.y) { seg = null; return; }
+      }
+      const raw = clamp((now - seg.t) / seg.ms, 0, 1);
+      // ease in at the start of the walk and out at the end, steady in between
+      const easeIn = r => (r < .3 ? r * r / .6 : r - .15) / .85;
+      const k = seg.first && seg.lastSeg ? raw * raw * (3 - 2 * raw) : seg.first ? easeIn(raw) : seg.lastSeg ? 1 - easeIn(1 - raw) : raw;
+      rig.position.x = seg.rx + seg.dx * k; rig.position.z = seg.rz + seg.dz * k; rig.position.y = seg.ry + (seg.ty - seg.ry) * k;
+      // VR: darken the edges while moving (fades in at the start, out at the end)
+      const vIn = seg.first ? Math.min(1, raw / .15) : 1, vOut = seg.lastSeg && !keepVignette ? Math.min(1, (1 - raw) / .15) : 1;
+      vignette(isXR() ? 0.85 * Math.min(vIn, vOut) : 0);
+      if (!isXR() && Math.hypot(seg.dx, seg.dz) > 0.1) { // screen: look where you walk
+        let want = Math.atan2(-seg.dx, -seg.dz); if (faceEnd) want = want * (1 - raw) ; let d = want - camera.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d));
+        camera.rotation.y += d * Math.min(1, dt / 1000 * 5); camera.rotation.x *= 0.92;
+      }
+      if ((kind === 'walk' || kind === 'stairs' || (kind !== 'escalator' && kind !== 'lift')) && now > stepAt) { sfx('step'); stepAt = now + (kind === 'stairs' ? 330 : 430); }
+      if (raw >= 1) seg = null;
+    });
+  });
 }
 function tweenG(ms, fn) { const t0 = performance.now(); return new Promise(res => { const off = onFrame(now => { const k = clamp((now - t0) / ms, 0, 1); fn(k * k * (3 - 2 * k)); if (k >= 1) { off(); res(); } }); }); }
 function travelCard(text, sub) {
