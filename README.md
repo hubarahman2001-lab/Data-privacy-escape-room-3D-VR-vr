@@ -23,6 +23,7 @@ There's nothing to install and no server. The page is static HTML, and Three.js 
 | Open hand (stop someone, hold doors) | Open palm | Hold A / X | Hold click on it |
 | Fist (lock the laptop) | Make a fist | Hold grip | Hold click on it |
 | Hint | 💡 above your left wrist | B / Y | H or 💡 |
+| Read Sam again, see time and goal | Look at your left wrist | Look at your left controller | Bottom of the screen |
 | Walk | Walk for real | Left stick (right stick turns) | WASD, drag to look |
 
 The game doesn't tell you which move to use. Sam gives a short brief, and you work out the rest. If you're stuck for 40 seconds, the exact move appears. You get 3 hints per run. A wrong choice costs 10 seconds, and flagging something harmless costs 5. The pass mark is 80% of choices right the first time.

@@ -130,31 +130,32 @@ hud.paint = (ctx, W, H) => {
 hud.visible = false; hud.mesh.userData.noHit = true;
 scene.add(hud);
 export function setHud(patch) {
-  const fresh = ('sam' in patch && patch.sam && patch.sam !== hud.state.sam) || ('obj' in patch && patch.obj && patch.obj !== hud.state.obj);
+  const fresh = 'sam' in patch && patch.sam && patch.sam !== hud.state.sam;
   Object.assign(hud.state, patch); hud.redraw(); if (wrist.redraw) wrist.redraw();
-  if (fresh) hud.showUntil = performance.now() + 9000;
+  if (fresh) {
+    // show it as long as it takes to read, then it goes away (VR); the line stays readable on your wrist
+    hud.showUntil = performance.now() + Math.min(11000, 2500 + patch.sam.length * 55); hud.placeNow = true;
+    wrist.flashUntil = performance.now() + 2500;
+  }
 }
 hud.active = false; hud.showUntil = 0;
-/* In VR the HUD is a subtitle: it comes into view when Sam talks or the goal changes, follows your gaze lazily,
-   then fades so it never covers what you're reaching for. The clock and code stay on your left wrist. */
-let hudInit = false, hudMoving = false, hudOp = 0;
-const _want = new THREE.Vector3(), _q = new THREE.Quaternion();
+/* In VR Sam's line is a subtitle placed ONCE, up above eye level where your hands never work, and it stays put
+   (it doesn't follow you). It fades when you've had time to read it. The full line, clock, code and goal are on your left wrist. */
+let hudOp = 0;
+const _q = new THREE.Quaternion();
 onFrame((n, dt) => {
   if (!isXR()) {
     hud.visible = hud.active; hud.mat.opacity = 1;
     if (hud.parent !== camera) { camera.add(hud); hud.position.set(0, -0.36, -0.82); hud.rotation.set(-0.25, 0, 0); hud.scale.setScalar(0.9); }
     return;
   }
-  if (hud.parent !== scene) { scene.add(hud); hud.scale.setScalar(1); hudInit = false; }
-  const target = hud.active && (n < hud.showUntil || hud.state.low) ? 1 : 0;
-  hudOp += (target - hudOp) * Math.min(1, dt / 1000 * (target ? 6 : 1.5));
-  hud.mat.opacity = hudOp; hud.visible = hudOp > 0.02;
-  headPos(_hp); camera.getWorldQuaternion(_q);
-  _want.set(0, -0.26, -0.9).applyQuaternion(_q).add(_hp);
-  if (!hudInit || !hud.visible && target) { hud.position.copy(_want); hudInit = true; }
-  if (hud.position.distanceTo(_want) > 0.3) hudMoving = true;
-  if (hudMoving) { hud.position.lerp(_want, Math.min(1, dt / 1000 * 4)); if (hud.position.distanceTo(_want) < 0.03) hudMoving = false; }
-  hud.lookAt(_hp);
+  if (hud.parent !== scene) { scene.add(hud); hud.scale.setScalar(0.85); hud.placeNow = true; }
+  const target = hud.active && n < hud.showUntil && hud.state.sam ? 1 : 0;
+  if (target && (hud.placeNow || hudOp < 0.05)) { // put it in front of where you're facing, high up
+    hud.placeNow = false; inFront(1.15, 0.32, 0, hud.position); headPos(_hp); hud.lookAt(_hp);
+  }
+  hudOp += (target - hudOp) * Math.min(1, dt / 1000 * (target ? 6 : 1.8));
+  hud.mat.opacity = hudOp * 0.9; hud.visible = hudOp > 0.02;
 });
 
 /* ---------- cards: lessons, zone cleared, messages ---------- */
@@ -170,7 +171,7 @@ export function showCard(title, body, { color = C.acc, ms = 5200, big = '' } = {
     textBlock(ctx, body, 50, y, W - 100 - (big ? 160 : 0), 40, C.text, 500, 1.25, 5);
   };
   p.redraw(); p.mesh.userData.noHit = true; uiRoot.add(p);
-  if (isXR()) placeInFront(p, 0.78, 0.1); else { camera.add(p); p.position.set(0, 0.2, -0.85); p.rotation.set(0, 0, 0); }
+  if (isXR()) { p.scale.setScalar(0.85); placeInFront(p, 1.0, 0.42); } else { camera.add(p); p.position.set(0, 0.2, -0.85); p.rotation.set(0, 0, 0); }
   card = p;
   cardTimer = setTimeout(hideCard, ms);
   return p;
@@ -230,12 +231,16 @@ export function glow(obj, color = 0xffc857) {
 }
 
 /* ---------- wrist menu (left hand / controller): clock, code, goal, hint and repeat ---------- */
-export const wrist = new Panel(0.17, 0.1, { res: 2400 });
+export const wrist = new Panel(0.18, 0.14, { res: 2400 });
+wrist.flashUntil = 0;
 wrist.paint = (ctx, W, H) => {
   const s = hud.state; ctx.textBaseline = 'top';
-  ctx.font = `700 46px ${FONT}`; ctx.fillStyle = s.low ? C.bad : C.text; ctx.fillText('⏱ ' + s.time, 26, 22);
-  ctx.fillStyle = C.acc; ctx.textAlign = 'right'; ctx.fillText(Array.from({ length: s.codeLen }, (_, i) => s.code[i] ?? '•').join(' '), W - 26, 22); ctx.textAlign = 'left';
-  ctx.font = `600 30px ${FONT}`; ctx.fillStyle = C.acc; const o = wrap(ctx, s.obj ? '▸ ' + s.obj : '', W - 52).slice(0, 2); o.forEach((l, i) => ctx.fillText(l, 26, 84 + i * 36));
+  if (performance.now() < wrist.flashUntil) { rrect(ctx, 3, 3, W - 6, H - 6, 36); ctx.lineWidth = 10; ctx.strokeStyle = C.warn; ctx.stroke(); }
+  ctx.font = `700 44px ${FONT}`; ctx.fillStyle = s.low ? C.bad : C.text; ctx.fillText('⏱ ' + s.time, 26, 20);
+  ctx.fillStyle = C.acc; ctx.textAlign = 'right'; ctx.fillText(Array.from({ length: s.codeLen }, (_, i) => s.code[i] ?? '•').join(' '), W - 26, 20); ctx.textAlign = 'left';
+  let y = 80;
+  if (s.sam) { ctx.font = `800 26px ${FONT}`; ctx.fillStyle = C.warn; ctx.fillText('📻 SAM', 26, y + 2); y = textBlock(ctx, s.sam, 140, y, W - 166, 28, C.text, 500, 1.2, 3) + 6; }
+  ctx.font = `600 28px ${FONT}`; ctx.fillStyle = C.acc; wrap(ctx, s.obj ? '▸ ' + s.obj : '', W - 52).slice(0, 1).forEach((l, i) => ctx.fillText(l, 26, y + i * 32));
 };
 wrist.visible = false; uiRoot.add(wrist);
 export function setupWrist(onHint, onRepeat) {
@@ -249,6 +254,7 @@ onFrame(() => {
   const left = pointers.find(p => p.side === 'left' && p.kind !== 'mouse');
   if (!left) { wrist.visible = false; return; }
   wrist.visible = true;
+  if (wrist.flashUntil && performance.now() > wrist.flashUntil) { wrist.flashUntil = 0; wrist.redraw(); }
   wrist.position.copy(left.palm).add(_up.set(0, left.kind === 'hand' ? 0.12 : 0.1, 0));
   headPos(_hp); wrist.lookAt(_hp);
 });
