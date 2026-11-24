@@ -1,8 +1,8 @@
 /* Game state, timer, scoring, hints, and the shared task helpers (hunt, decide, drag, hold, readers, exits) */
-import { THREE, scene, camera, body, onFrame, sleep, headPos, isXR, inFront, fade, recenter, fitHeight, clamp, V } from './core.js';
+import { THREE, scene, camera, rig, body, onFrame, sleep, headPos, isXR, inFront, fade, recenter, fitHeight, clamp, V } from './core.js';
 import { pointers, input, at, raycastAll, inputKind, boxOf } from './input.js';
 import { Panel, C, FONT, textBlock, wrap, rrect, hud, setHud, showCard, hideCard, placeInFront, Ring, glow, uiRoot, wrist, setupWrist } from './ui.js';
-import { sfx, speak, stopSpeech, initAudio, ambience } from './audio.js';
+import { sfx, speak, stopSpeech, initAudio, ambience, travelSound } from './audio.js';
 import { idCard } from './world.js';
 
 export const CFG = { TIME_LIMIT: 900, WRONG_PENALTY: 10, MAX_HINTS: 3, PASS_MARK: 0.8, DECOY_PENALTY: 5, VAGUE_MS: 40000, FREE_NUDGE_MS: 60000 };
@@ -344,6 +344,7 @@ export async function startGame({ intro = true, from = 0 } = {}) {
   clearRoom(); hideCard(); stopSpeech();
   uiRoot.children.slice().forEach(c => { if (c !== wrist && c.userData && c !== hud) { if (c.dispose) c.dispose(); else c.removeFromParent(); } });
   camera.children.slice().forEach(c => { if (c instanceof Panel && c !== hud) c.dispose(); });
+  pendingTravel = null;
   Object.assign(G, { state: 'intro', timeLeft: CFG.TIME_LIMIT, score: 0, hints: CFG.MAX_HINTS, code: Array.from({ length: 4 }, () => 1 + Math.floor(Math.random() * 9)),
     got: [], choices: [], penalties: 0, paused: false, lastLine: '', hintStack: [] });
   dropHeldCard(); setBadge('none');
@@ -363,7 +364,8 @@ export async function startGame({ intro = true, from = 0 } = {}) {
     recenter(); if (i === from) fitHeight();
     ambStop = ambience(R.amb || 'hum');
     setHud({ zone: `${R.floor} · ${R.name}` });
-    await fade(0, 500); if (id !== G.runId) return;
+    if (pendingTravel) { await pendingTravel.arrive(); pendingTravel = null; } else await fade(0, 700);
+    if (id !== G.runId) return;
     if (i === from && intro) { hud.active = false; await introPanel(); if (id !== G.runId) return; }
     G.state = 'play'; hud.active = true; hud.showUntil = performance.now() + 9000;
     if (R.line) await say(R.line);
@@ -374,10 +376,53 @@ export async function startGame({ intro = true, from = 0 } = {}) {
       await wait(1800);
     }
     if (R.outro) await say(R.outro);
-    if (R.exit) await guard(exitRoom(R.exit(refs)));
-    await fade(1, 450);
+    const ex = R.exit ? R.exit(refs) : null;
+    if (ex) await guard(exitRoom(ex));
+    pendingTravel = await travelOut(ex, ROOMS[i + 1]);
   }
   if (id === G.runId) results(true);
+}
+
+/* ---------- between rooms: walk on, fade through a short "on the way" card, then arrive ---------- */
+let pendingTravel = null;
+const _gl = new THREE.Vector3();
+async function travelOut(ex, next) {
+  hud.showUntil = 0; hideCard();
+  const lvl = next ? (next.floor === 'P' ? 'Car park' : next.floor === 'G' ? 'Ground floor' : 'Level ' + next.floor) : '';
+  const text = (ex && ex.travel) || 'Walking on…', sub = next ? (lvl.toLowerCase() === next.name.toLowerCase() ? next.name : `${lvl} · ${next.name}`) : '';
+  travelSound((ex && ex.sound) || 'walk', 2600);
+  // on a screen, glide a few steps toward the exit while it goes dark (in VR the world never moves you: comfort)
+  if (!isXR() && ex && ex.pos) {
+    const from = rig.position.clone(); headPos(_gl);
+    const dx = ex.pos[0] - _gl.x, dz = ex.pos[1] - _gl.z, len = Math.hypot(dx, dz), go = Math.min(1.4, len);
+    const to = from.clone().add(new THREE.Vector3(dx / (len || 1) * go, 0, dz / (len || 1) * go));
+    const yaw0 = camera.rotation.y, yaw1 = Math.atan2(-dx, -dz), pitch0 = camera.rotation.x;
+    let dy = yaw1 - yaw0; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    tweenG(1300, k => { rig.position.lerpVectors(from, to, k); camera.rotation.y = yaw0 + dy * Math.min(1, k * 1.6); camera.rotation.x = pitch0 * (1 - k); });
+  }
+  await sleep(350);
+  await fade(1, 950);
+  const card = travelCard(text, sub); await card.show(450);
+  const t0 = performance.now();
+  return { async arrive() {
+    const left = 1700 - (performance.now() - t0); if (left > 0) await sleep(left);
+    card.hide(700); await fade(0, 1100); card.dispose();
+  } };
+}
+function tweenG(ms, fn) { const t0 = performance.now(); return new Promise(res => { const off = onFrame(now => { const k = clamp((now - t0) / ms, 0, 1); fn(k * k * (3 - 2 * k)); if (k >= 1) { off(); res(); } }); }); }
+function travelCard(text, sub) {
+  const P = new Panel(0.9, 0.24, { res: 1600, bg: false });
+  P.paint = (ctx, W, H) => {
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    let fs = 64; ctx.font = `600 ${fs}px ${FONT}`;
+    while (fs > 30 && ctx.measureText(text).width > W * .92) { fs -= 4; ctx.font = `600 ${fs}px ${FONT}`; }
+    ctx.fillStyle = C.text; ctx.fillText(text, W / 2, H * .38);
+    if (sub) { ctx.font = `700 40px ${FONT}`; ctx.fillStyle = C.acc; ctx.fillText(sub.toUpperCase(), W / 2, H * .7); }
+  };
+  P.redraw(); P.mat.depthTest = false; P.mat.opacity = 0; P.mesh.renderOrder = 10001; P.mesh.userData.noHit = true;
+  camera.add(P); P.position.set(0, 0, -1.0);
+  const to = (o, ms) => { const a = P.mat.opacity; return tweenG(ms, k => P.mat.opacity = a + (o - a) * k); };
+  return { show: ms => to(1, ms), hide: ms => to(0, ms), dispose: () => P.dispose() };
 }
 
 function introPanel() {

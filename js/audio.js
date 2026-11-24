@@ -46,6 +46,17 @@ export function sfx(name) {
     case 'decoy': tone(400, .12, { type: 'square', vol: .06 }); tone(300, .14, { type: 'square', vol: .06, at: .1 }); break;
   }
 }
+/* the sound of getting from one room to the next */
+export function travelSound(kind, ms = 2400) {
+  if (!ac || muted) return;
+  const steps = (gap, n, at = 0, vol = .09) => { for (let i = 0; i < n; i++) { noise(.07, { vol: vol * (0.8 + Math.random() * .4), lp: 500 + (i % 2) * 150, at: at + i * gap }); tone(70, .06, { vol: .05, at: at + i * gap }); } };
+  if (kind === 'stairs') { steps(.3, Math.floor(ms / 300)); noise(.6, { vol: .04, lp: 300, at: .2 }); }
+  else if (kind === 'escalator') { tone(65, ms / 1000, { type: 'sawtooth', vol: .035, attack: .3 }); noise(ms / 1000, { vol: .05, lp: 220 }); steps(.35, 3, 0, .06); }
+  else if (kind === 'lift') { tone(1046, .5, { vol: .12 }); tone(784, .7, { vol: .12, at: .35 }); noise(.5, { vol: .08, lp: 600, at: .2 });
+    tone(60, 1.2, { type: 'sine', vol: .06, at: .7, attack: .3 }); tone(1318, .6, { vol: .12, at: ms / 1000 - .5 }); noise(.5, { vol: .08, lp: 600, at: ms / 1000 - .4 }); }
+  else steps(.42, Math.floor(ms / 420));
+}
+
 /* phone ringtone loop; returns stop() */
 export function ringtone() {
   let on = true; const go = () => { if (!on) return; for (let i = 0; i < 8; i++) { tone(1100, .045, { type: 'square', vol: .06, at: i * .05 }); tone(1400, .045, { type: 'square', vol: .05, at: i * .05 + .025 }); } setTimeout(go, 1800); };

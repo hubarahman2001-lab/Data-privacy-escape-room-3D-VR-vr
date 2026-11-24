@@ -189,7 +189,7 @@ const parking = {
           objective('ID card in your pocket'); },
         lesson: ['Keep your card on you', 'An ID card left in a car can be taken and used by someone else.'] }] });
   },
-  exit: r => ({ target: r.door, pos: [2.9, -2.2], label: 'Take the stairs up' }),
+  exit: r => ({ target: r.door, pos: [2.9, -2.2], label: 'Take the stairs up', travel: 'Taking the stairs up to the ground floor…', sound: 'stairs' }),
 };
 
 /* ======================================================================
@@ -243,7 +243,7 @@ const ground = {
     lesson(['Badge on inside, away outside', 'Wear your card where it can be seen in the building. Outside, put it away: a badge tells strangers where you work.']);
     await wait(800);
   },
-  exit: r => ({ target: r.steps, pos: [0, -1.4, 1.6], label: 'Ride the escalator up' }),
+  exit: r => ({ target: r.steps, pos: [0, -1.4, 1.6], label: 'Ride the escalator up', travel: 'Riding the escalator up to Level 1…', sound: 'escalator' }),
 };
 
 /* ======================================================================
@@ -319,7 +319,7 @@ const reception = {
           task: async () => { await wait(900); await decide(DECISIONS.badgeIssue); } }],
       decoys: [{ obj: r.pen, say: 'Just a pen. Nothing to worry about.' }, { obj: r.mags, say: 'Old magazines. Nothing personal in there.' }] });
   },
-  exit: r => ({ target: r.exitSign, pos: [2.1, -0.4], label: 'Walk to the gates' }),
+  exit: r => ({ target: r.exitSign, pos: [2.1, -0.4], label: 'Walk to the gates', travel: 'Walking over to the security gates…', sound: 'walk' }),
 };
 
 /* ======================================================================
@@ -382,7 +382,7 @@ const gates = {
           await tween(500, k => r.flaps.forEach(f => f.piv.rotation.y = f.s * k * 1.45));
         }, lesson: ['One tap, one person', 'Never let anyone follow you through on your card.'] }] });
   },
-  exit: r => ({ target: r.readers[1], pos: [0.4, -2.2], label: 'Head for the lifts' }),
+  exit: r => ({ target: r.readers[1], pos: [0.4, -2.2], label: 'Head for the lifts', travel: 'Through the gates, over to the lifts…', sound: 'walk' }),
 };
 
 /* ======================================================================
@@ -447,7 +447,7 @@ const lifts = {
     await walkTo(r.visitor, 0, .9, 1400); r.visitor.visible = false;
     await tween(600, k => r.B.set(1 - k));
   },
-  exit: r => { r.A.set(0); tween(900, k => r.A.set(k)); return { target: r.A.g, pos: [-0.75, -1.5], label: 'Ride up to Floor 4' }; },
+  exit: r => { r.A.set(0); tween(900, k => r.A.set(k)); return { target: r.A.g, pos: [-0.75, -1.5], label: 'Ride up to Floor 4', travel: 'Going up to Floor 4…', sound: 'lift' }; },
 };
 
 /* ======================================================================
@@ -526,7 +526,7 @@ const entrance = {
           walkTo(r.pA, -1.0, -3.5, 2500).then(() => r.pA.visible = false); walkTo(r.pB, -0.8, -3.8, 2700).then(() => r.pB.visible = false);
         }, lesson: ['Need to know, not nice to know', 'Discuss customer details in private, with the people who need them.'] }] });
   },
-  exit: r => ({ target: r.dl, pos: [0, -1.9], label: 'Walk to your desk' }),
+  exit: r => ({ target: r.dl, pos: [0, -1.9], label: 'Walk to your desk', travel: 'Across the office to your desk…', sound: 'walk' }),
 };
 
 /* ======================================================================
@@ -626,7 +626,7 @@ const desk = {
     lesson(['Real IT never asks for your password', 'Urgency is a red flag. Hang up and report the call.']);
     await wait(1200);
   },
-  exit: r => ({ target: null, pos: [-1.55, 0.6, 2.3], label: 'Check the meeting room' }),
+  exit: r => ({ target: null, pos: [-1.55, 0.6, 2.3], label: 'Check the meeting room', travel: 'Into meeting room 4.12…', sound: 'walk' }),
 };
 
 /* ======================================================================
@@ -722,7 +722,7 @@ const meeting = {
           }, lesson: ['Confidential means locked away', 'Unreleased financials stay locked up and go only to people who need them.'] }],
       decoys: [{ obj: r.glassW, say: 'Just water. Nothing to protect.' }] });
   },
-  exit: r => ({ target: null, pos: [-1.45, 1.1, 2.2], label: 'Go to the print station' }),
+  exit: r => ({ target: null, pos: [-1.45, 1.1, 2.2], label: 'Go to the print station', travel: 'Down the corridor to the print station…', sound: 'walk' }),
 };
 
 /* ======================================================================
@@ -821,7 +821,7 @@ const printer = {
             showCard('Key in your pocket', "You'll hand it to Security on the way out.", { color: C.acc, ms: 3000 });
           }, lesson: ['Keys stay with their owner', 'Lock up, and hand a found key to its named holder or to Security.'] }] });
   },
-  exit: r => ({ target: null, pos: [-1.5, 0.9, 2.3], label: 'Enter the server room' }),
+  exit: r => ({ target: null, pos: [-1.5, 0.9, 2.3], label: 'Enter the server room', travel: 'To the server room door…', sound: 'walk' }),
 };
 
 /* ======================================================================
