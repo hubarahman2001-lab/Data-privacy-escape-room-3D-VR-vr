@@ -8,7 +8,7 @@ https://hubarahman2001-lab.github.io/Data-privacy-escape-room-3D-VR-vr/
 
 ## Play it
 
-- **On a Meta Quest:** open the GitHub Pages link in the **Quest Browser** and press **Enter VR**. Put the controllers down: hand tracking works best. (Turn on hand tracking under *Settings → Movement tracking* if it's off.) Clear about 2 × 2 m of space, because you'll take a step or two to reach some things.
+- **On a Meta Quest:** open the GitHub Pages link in the **Quest Browser** and press **Enter VR**. Put the controllers down: hand tracking works best. (Turn on hand tracking under *Settings → Movement tracking* if it's off.) Clear about 2 × 2 m of space, because you'll take a step or two to reach some things. The game's floor sits on your real floor. If you play sitting down, tick **Playing sitting down** on the start page.
 - **On a laptop or PC:** open the same link and press **Play on this screen**.
 
 There's nothing to install and no server. The page is static HTML, and Three.js is included in `lib/`.

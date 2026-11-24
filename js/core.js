@@ -119,9 +119,10 @@ export function recenter() {
   }
   rig.updateMatrixWorld(true); snapBody();
 }
-/* seated players: lift the rig so the head sits at standing height */
-export function fitHeight() {
+/* The virtual floor sits exactly on your real floor (the headset knows where it is).
+   Only if the player chose "seated" do we lift the room's eye line to standing height. */
+export function fitHeight(seated = false) {
   if (!isXR()) return;
   const h = camera.position.y;
-  rig.position.y = h > 0.3 && h < 1.35 ? 1.6 - h : 0;
+  rig.position.y = seated && h > 0.3 && h < 1.5 ? 1.6 - h : 0;
 }

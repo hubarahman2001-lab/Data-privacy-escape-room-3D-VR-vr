@@ -6,7 +6,7 @@ import { sfx, speak, stopSpeech, initAudio, ambience, travelSound } from './audi
 import { idCard } from './world.js';
 
 export const CFG = { TIME_LIMIT: 900, WRONG_PENALTY: 10, MAX_HINTS: 3, PASS_MARK: 0.8, DECOY_PENALTY: 5, VAGUE_MS: 40000, FREE_NUDGE_MS: 60000 };
-export const G = { comfort: false, runId: 0, state: 'idle', timeLeft: CFG.TIME_LIMIT, score: 0, hints: CFG.MAX_HINTS, code: [], got: [], choices: [], penalties: 0,
+export const G = { comfort: false, seated: false, runId: 0, state: 'idle', timeLeft: CFG.TIME_LIMIT, score: 0, hints: CFG.MAX_HINTS, code: [], got: [], choices: [], penalties: 0,
   paused: false, badge: 'none', lastLine: '', hintStack: [], cleanups: [] };
 
 /* ---------- run guards: when the game restarts, old task chains freeze instead of carrying on ---------- */
@@ -361,7 +361,7 @@ export async function startGame({ intro = true, from = 0 } = {}) {
     clearRoom(); current = R;
     const refs = R.build(roomRoot); G.refs = refs; G.roomId = R.id;
     input.bounds = R.bounds || null;
-    recenter(); if (i === from) fitHeight();
+    recenter(); if (i === from) fitHeight(G.seated);
     ambStop = ambience(R.amb || 'hum');
     setHud({ zone: `${R.floor} · ${R.name}` });
     if (pendingTravel) { await pendingTravel.arrive(R); pendingTravel = null; } else await fade(0, 700);
