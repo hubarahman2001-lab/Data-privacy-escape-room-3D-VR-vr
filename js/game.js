@@ -391,7 +391,8 @@ async function travelOut(ex, next) {
   const lvl = next ? (next.floor === 'P' ? 'Car park' : next.floor === 'G' ? 'Ground floor' : 'Level ' + next.floor) : '';
   const text = (ex && ex.travel) || 'Walking on…', sub = next ? (lvl.toLowerCase() === next.name.toLowerCase() ? next.name : `${lvl} · ${next.name}`) : '';
   const kind = (ex && ex.sound) || 'walk';
-  const walking = !G.comfort && ex && ex.pos;
+  // VR never moves you on its own (it makes people dizzy): rooms fade. On a screen you walk through.
+  const walking = !isXR() && ex && ex.pos;
   const baseY = rig.position.y;
   if (walking) {
     // walk to the exit and on through it; it only goes dark at the doorway

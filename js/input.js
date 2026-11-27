@@ -39,7 +39,8 @@ const slots = [0, 1].map(i => {
   const model = handFactory.createHandModel(hand, 'mesh'); hand.add(model);
   grip.add(controllerModel());
   // pointer line (shown when aiming at a panel)
-  const lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]);
+  // the line runs along +Z because lookAt() turns an object's +Z toward the target
+  const lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, 1)]);
   s.line = new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0x7be9ff, transparent: true, opacity: .8, depthTest: false }));
   s.line.renderOrder = 999; s.line.visible = false; s.line.frustumCulled = false; scene.add(s.line);
   s.dot = new THREE.Mesh(new THREE.SphereGeometry(0.008, 10, 8), new THREE.MeshBasicMaterial({ color: 0x7be9ff, depthTest: false }));

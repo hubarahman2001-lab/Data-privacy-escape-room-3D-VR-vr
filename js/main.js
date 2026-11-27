@@ -17,15 +17,10 @@ async function checkVR() {
   } catch (e) { vrBtn.disabled = true; }
 }
 checkVR();
-/* comfort mode: fade between rooms instead of the game walking you there */
-const comfortBox = $('#comfort');
-try { comfortBox.checked = localStorage.getItem('comfort') === '1'; } catch (e) {}
-G.comfort = comfortBox.checked;
 const seatedBox = $('#seated');
 try { seatedBox.checked = localStorage.getItem('seated') === '1'; } catch (e) {}
 G.seated = seatedBox.checked;
 seatedBox.addEventListener('change', () => { G.seated = seatedBox.checked; try { localStorage.setItem('seated', G.seated ? '1' : '0'); } catch (e) {} });
-comfortBox.addEventListener('change', () => { G.comfort = comfortBox.checked; try { localStorage.setItem('comfort', G.comfort ? '1' : '0'); } catch (e) {} });
 /* opened from the course (SCORM): say where the result goes */
 if (/[?&]scorm=1/.test(location.search)) {
   const tip = document.createElement('p'); tip.style.cssText = 'color:#7be9ff;font-size:14px;margin-top:6px';

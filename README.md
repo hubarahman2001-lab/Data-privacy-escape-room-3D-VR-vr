@@ -43,7 +43,7 @@ The game doesn't tell you which move to use. Sam gives a short brief, and you wo
 
 ## Moving between rooms
 
-When you leave a room, the game walks you to the exit and through it. It rides the escalator up and takes you into the lift, and you walk into the next room from its doorway. In VR the edges of your view darken while you're being moved, which helps with motion sickness. If moving in VR still feels bad, tick **Comfort mode** on the start page to fade between rooms instead.
+In VR the game never moves you on its own: you walk around each room yourself, and the screen fades between rooms. On a screen, the view walks you to the exit, then into the next room.
 
 ## Edit the questions
 
